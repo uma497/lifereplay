@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LifeReplay — Windows</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080a0e; --surface: #0d1117; --surface2: #131920;
+    --border: #1e2d3d; --amber: #f5a623; --amber-dim: #9b6a18;
+    --amber-glow: rgba(245,166,35,0.12); --green: #39d353;
+    --blue: #58a6ff; --red: #ff6b6b; --purple: #bf8fff;
+    --text: #cdd9e5; --text-dim: #5c7080; --text-muted: #3a4a58;
+    --mono: 'Space Mono', monospace; --display: 'Syne', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--mono); min-height: 100vh; overflow-x: hidden; }
+  body::before { content:''; position:fixed; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.04) 2px,rgba(0,0,0,0.04) 4px); pointer-events:none; z-index:9999; }
+
+  /* HEADER */
+  header { border-bottom:1px solid var(--border); padding:0 1.5rem; height:52px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; background:rgba(8,10,14,0.96); backdrop-filter:blur(12px); z-index:100; }
+  .logo { display:flex; align-items:center; gap:9px; font-family:var(--display); font-weight:800; font-size:1.15rem; color:var(--amber); }
+  .logo-icon { width:26px; height:26px; background:var(--amber); border-radius:5px; display:flex; align-items:center; justify-content:center; color:var(--bg); font-size:0.75rem; animation:pulse 3s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(245,166,35,.4)} 50%{box-shadow:0 0 0 8px rgba(245,166,35,0)} }
+  .header-right { display:flex; align-items:center; gap:1rem; }
+  .status { display:flex; align-items:center; gap:5px; font-size:0.68rem; }
+  .dot { width:6px; height:6px; border-radius:50%; background:var(--green); animation:blink 2s step-end infinite; }
+  .dot.red { background:var(--red); animation:none; }
+  @keyframes blink { 50%{opacity:0} }
+  .ctrl-btn { padding:5px 12px; border-radius:4px; font-family:var(--mono); font-size:0.68rem; cursor:pointer; border:1px solid var(--border); background:var(--surface); color:var(--text-dim); transition:all .15s; text-transform:uppercase; letter-spacing:.06em; }
+  .ctrl-btn:hover { border-color:var(--amber-dim); color:var(--amber); }
+  .ctrl-btn.danger:hover { border-color:#ff4444; color:#ff4444; }
+
+  /* LAYOUT */
+  .shell { display:grid; grid-template-columns:220px 1fr 280px; height:calc(100vh - 52px - 28px); }
+
+  /* SIDEBAR */
+  .sidebar { border-right:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
+  .sb-section { padding:1rem 0.9rem 0.7rem; border-bottom:1px solid var(--border); }
+  .sb-label { font-size:0.58rem; text-transform:uppercase; letter-spacing:.1em; color:var(--text-muted); margin-bottom:.6rem; }
+  .nav-item { display:flex; align-items:center; gap:7px; padding:5px 7px; border-radius:4px; cursor:pointer; font-size:0.75rem; color:var(--text-dim); transition:all .15s; margin-bottom:1px; }
+  .nav-item:hover { background:var(--surface2); color:var(--text); }
+  .nav-item.active { background:var(--amber-glow); color:var(--amber); border:1px solid var(--amber-dim); }
+  .stat-row { display:flex; justify-content:space-between; align-items:baseline; padding:3px 0; font-size:0.7rem; color:var(--text-dim); border-bottom:1px solid var(--surface2); }
+  .stat-row:last-child { border-bottom:none; }
+  .stat-val { color:var(--amber); font-weight:700; }
+  .pipeline { padding:.8rem; flex:1; overflow-y:auto; }
+  .pipe-item { display:flex; align-items:center; gap:7px; padding:5px 0; font-size:0.66rem; color:var(--text-dim); border-bottom:1px solid var(--surface2); }
+  .pipe-item:last-child { border-bottom:none; }
+  .pipe-dot { width:5px; height:5px; border-radius:50%; background:var(--green); flex-shrink:0; }
+  .pipe-dot.off { background:var(--text-muted); }
+
+  /* MAIN */
+  .main { display:flex; flex-direction:column; overflow:hidden; }
+  .search-zone { padding:.9rem 1.3rem; border-bottom:1px solid var(--border); display:flex; gap:.7rem; align-items:center; }
+  .search-wrap { flex:1; position:relative; }
+  .search-wrap input { width:100%; background:var(--surface); border:1px solid var(--border); color:var(--text); font-family:var(--mono); font-size:0.8rem; padding:7px 11px 7px 33px; border-radius:5px; outline:none; transition:border-color .2s; }
+  .search-wrap input:focus { border-color:var(--amber); box-shadow:0 0 0 3px var(--amber-glow); }
+  .search-wrap input::placeholder { color:var(--text-muted); }
+  .search-icon { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--text-muted); }
+  .mode-btn { padding:6px 11px; border-radius:4px; font-family:var(--mono); font-size:0.67rem; cursor:pointer; border:1px solid var(--border); background:var(--surface); color:var(--text-dim); text-transform:uppercase; letter-spacing:.05em; transition:all .15s; white-space:nowrap; }
+  .mode-btn.active { background:var(--amber-glow); border-color:var(--amber-dim); color:var(--amber); }
+  .tabs { display:flex; padding:0 1.3rem; border-bottom:1px solid var(--border); gap:0; overflow-x:auto; }
+  .tab { padding:7px 14px; font-size:0.68rem; color:var(--text-dim); cursor:pointer; border-bottom:2px solid transparent; transition:all .15s; white-space:nowrap; text-transform:uppercase; letter-spacing:.05em; flex-shrink:0; }
+  .tab.active { color:var(--amber); border-bottom-color:var(--amber); }
+
+  /* FEED */
+  .feed { flex:1; overflow-y:auto; padding:.8rem 1.3rem; }
+  .feed::-webkit-scrollbar { width:3px; }
+  .feed::-webkit-scrollbar-thumb { background:var(--border); }
+  .group-label { font-size:0.6rem; text-transform:uppercase; letter-spacing:.1em; color:var(--text-muted); padding:6px 0 5px; display:flex; align-items:center; gap:7px; }
+  .group-label::after { content:''; flex:1; height:1px; background:var(--surface2); }
+  .memory-card { display:grid; grid-template-columns:56px 1fr; gap:0; margin-bottom:2px; border-radius:5px; overflow:hidden; border:1px solid transparent; cursor:pointer; transition:all .15s; }
+  .memory-card:hover { border-color:var(--border); background:var(--surface); }
+  .memory-card.selected { border-color:var(--amber-dim); background:var(--amber-glow); }
+  .card-thumb { background:var(--surface2); display:flex; align-items:center; justify-content:center; font-size:1.1rem; border-right:1px solid var(--border); overflow:hidden; min-height:56px; }
+  .card-thumb img { width:100%; height:100%; object-fit:cover; }
+  .card-body { padding:7px 9px; display:flex; flex-direction:column; gap:2px; min-width:0; }
+  .card-top { display:flex; align-items:center; gap:5px; justify-content:space-between; }
+  .app-badge { font-size:0.58rem; padding:1px 5px; border-radius:3px; background:var(--surface2); color:var(--text-dim); border:1px solid var(--border); white-space:nowrap; max-width:90px; overflow:hidden; text-overflow:ellipsis; }
+  .card-time { font-size:0.58rem; color:var(--text-muted); white-space:nowrap; }
+  .card-text { font-size:0.7rem; color:var(--text); line-height:1.4; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .card-text mark { background:rgba(245,166,35,.25); color:var(--amber); border-radius:2px; padding:0 1px; }
+  .sim-badge { font-size:0.58rem; color:var(--blue); margin-left:auto; }
+
+  /* DETAIL PANEL */
+  .detail-panel { border-left:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
+  .panel-hdr { padding:.7rem .9rem; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+  .panel-hdr-title { font-family:var(--display); font-weight:700; font-size:0.82rem; }
+  .panel-id { font-size:0.6rem; color:var(--text-muted); font-family:var(--mono); }
+  .panel-body { flex:1; overflow-y:auto; padding:.9rem; }
+  .panel-body::-webkit-scrollbar { width:3px; }
+  .panel-body::-webkit-scrollbar-thumb { background:var(--border); }
+  .preview-box { background:var(--surface2); border:1px solid var(--border); border-radius:7px; overflow:hidden; margin-bottom:.9rem; }
+  .preview-box img { width:100%; display:block; }
+  .preview-placeholder { aspect-ratio:16/9; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:0.72rem; }
+  .ocr-block { background:var(--surface); border:1px solid var(--border); border-radius:5px; padding:.7rem; font-size:0.68rem; line-height:1.7; color:var(--text-dim); margin-bottom:.8rem; position:relative; max-height:140px; overflow-y:auto; }
+  .block-label { position:absolute; top:-8px; left:8px; font-size:0.52rem; background:var(--surface2); padding:0 5px; color:var(--blue); border:1px solid var(--border); border-radius:3px; text-transform:uppercase; letter-spacing:.07em; }
+  .meta-grid { display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-bottom:.8rem; }
+  .meta-cell { background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:6px 8px; }
+  .meta-key { font-size:0.52rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.07em; margin-bottom:1px; }
+  .meta-val { font-size:0.7rem; color:var(--text); word-break:break-all; }
+  .empty-state { color:var(--text-muted); font-size:0.72rem; text-align:center; padding:2rem 0; }
+
+  /* BOTTOM BAR */
+  .bottombar { height:28px; border-top:1px solid var(--border); display:flex; align-items:center; padding:0 1.3rem; gap:1.5rem; background:var(--surface); font-size:0.58rem; color:var(--text-muted); }
+  .bi { display:flex; align-items:center; gap:4px; }
+  .bi .v { color:var(--text-dim); }
+
+  /* LOADING / ERROR */
+  .spinner { display:inline-block; width:12px; height:12px; border:2px solid var(--border); border-top-color:var(--amber); border-radius:50%; animation:spin .7s linear infinite; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  .error-banner { background:rgba(255,107,107,.1); border:1px solid rgba(255,107,107,.3); color:var(--red); font-size:0.72rem; padding:.6rem 1rem; border-radius:5px; margin:.8rem 1.3rem; }
+
+  /* Animations */
+  @keyframes slideIn { from{opacity:0;transform:translateX(-6px)} to{opacity:1;transform:none} }
+  .memory-card { animation:slideIn .25s ease both; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">▶</div>
+    LifeReplay
+  </div>
+  <div class="header-right">
+    <div class="status" id="status-indicator">
+      <div class="dot red" id="status-dot"></div>
+      <span id="status-text">Connecting…</span>
+    </div>
+    <button class="ctrl-btn" id="btn-start" onclick="startCapture()">▶ Start</button>
+    <button class="ctrl-btn danger" id="btn-stop" onclick="stopCapture()">■ Stop</button>
+    <button class="ctrl-btn" onclick="loadMemories()">↻ Refresh</button>
+  </div>
+</header>
+
+<div class="shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-section">
+      <div class="sb-label">Navigate</div>
+      <div class="nav-item active" onclick="filterApp('',this)">⏱ All Memories</div>
+      <div id="app-list"><!-- populated --></div>
+    </div>
+    <div class="sb-section" id="stats-section">
+      <div class="sb-label">Stats</div>
+      <div class="stat-row"><span>Total memories</span><span class="stat-val" id="s-total">—</span></div>
+      <div class="stat-row"><span>Today</span><span class="stat-val" id="s-today">—</span></div>
+      <div class="stat-row"><span>Embeddings</span><span class="stat-val" id="s-emb">—</span></div>
+      <div class="stat-row"><span>DB size</span><span class="stat-val" id="s-db">—</span></div>
+    </div>
+    <div class="pipeline">
+      <div class="sb-label">Pipeline</div>
+      <div class="pipe-item"><div class="pipe-dot" id="p-screen"></div><span>Screen Capture (mss)</span></div>
+      <div class="pipe-item"><div class="pipe-dot" id="p-ocr"></div><span>Tesseract OCR</span></div>
+      <div class="pipe-item"><div class="pipe-dot" id="p-fts"></div><span>SQLite FTS5</span></div>
+      <div class="pipe-item"><div class="pipe-dot" id="p-emb" class="off"></div><span>MiniLM Embeddings</span></div>
+      <div class="pipe-item"><div class="pipe-dot" id="p-dedup"></div><span>Deduplication</span></div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="search-zone">
+      <div class="search-wrap">
+        <span class="search-icon">⌕</span>
+        <input type="text" id="searchInput" placeholder="Search memories… (try: youtube, code, email…)" oninput="debounceSearch(this.value)">
+      </div>
+      <button class="mode-btn active" id="btn-keyword" onclick="setMode('keyword',this)">⚡ Keyword</button>
+      <button class="mode-btn" id="btn-semantic" onclick="setMode('semantic',this)">🧠 Semantic</button>
+    </div>
+
+    <div class="tabs" id="tabs">
+      <div class="tab active" onclick="filterApp('',this)" data-app="">All</div>
+      <!-- app tabs added dynamically -->
+    </div>
+
+    <div class="feed" id="feed">
+      <div style="padding:2rem;text-align:center;color:var(--text-muted);font-size:.75rem">
+        <div class="spinner"></div><br><br>Connecting to backend…
+      </div>
+    </div>
+  </main>
+
+  <!-- DETAIL -->
+  <aside class="detail-panel">
+    <div class="panel-hdr">
+      <span class="panel-hdr-title">Memory Detail</span>
+      <span class="panel-id" id="detail-id">—</span>
+    </div>
+    <div class="panel-body" id="detail-body">
+      <div class="empty-state">← Select a memory</div>
+    </div>
+  </aside>
+
+</div>
+
+<div class="bottombar">
+  <div class="bi">🗄 SQLite FTS5 <span class="v">enabled</span></div>
+  <div class="bi">🧠 MiniLM <span class="v" id="b-semantic">checking…</span></div>
+  <div class="bi">⚡ Captured <span class="v" id="b-runtime">0</span></div>
+  <div class="bi">⏭ Skipped <span class="v" id="b-skipped">0</span></div>
+  <div class="bi" id="b-clock"></div>
+</div>
+
+<script>
+const API = "http://localhost:5000/api";
+let searchMode = "keyword";
+let currentApp = "";
+let searchTimer = null;
+let selectedId = null;
+let allApps = [];
+
+// ── API helpers ───────────────────────────────────────────────────────────────
+async function api(path) {
+  try {
+    const r = await fetch(API + path);
+    if (!r.ok) throw new Error(r.statusText);
+    return await r.json();
+  } catch (e) {
+    return null;
+  }
+}
+
+async function apiPost(path) {
+  try {
+    const r = await fetch(API + path, { method: "POST" });
+    return await r.json();
+  } catch { return null; }
+}
+
+// ── Connection & Stats ────────────────────────────────────────────────────────
+async function checkStatus() {
+  const data = await api("/stats");
+  const dot = document.getElementById("status-dot");
+  const txt = document.getElementById("status-text");
+  if (!data) {
+    dot.className = "dot red";
+    txt.textContent = "Backend offline";
+    showOfflineError();
+    return false;
+  }
+  dot.className = "dot";
+  txt.textContent = data.capture_running ? "Recording" : "Paused";
+
+  document.getElementById("s-total").textContent = data.total_memories.toLocaleString();
+  document.getElementById("s-today").textContent = data.today;
+  document.getElementById("s-emb").textContent = data.with_embeddings.toLocaleString();
+  document.getElementById("s-db").textContent = data.db_size_mb + " MB";
+
+  // Pipeline dots
+  document.getElementById("p-screen").className = "pipe-dot" + (data.capture_running ? "" : " off");
+  document.getElementById("p-ocr").className = "pipe-dot" + (data.capture_running ? "" : " off");
+  document.getElementById("p-fts").className = "pipe-dot";
+  document.getElementById("p-emb").className = "pipe-dot" + (data.semantic_enabled ? "" : " off");
+  document.getElementById("p-dedup").className = "pipe-dot";
+  document.getElementById("b-semantic").textContent = data.semantic_enabled ? "enabled" : "disabled";
+
+  const rs = data.runtime_stats || {};
+  document.getElementById("b-runtime").textContent = rs.captured || 0;
+  document.getElementById("b-skipped").textContent = (rs.skipped_dup || 0) + (rs.skipped_empty || 0);
+
+  // App list & tabs
+  if (data.top_apps && data.top_apps.length) {
+    allApps = data.top_apps;
+    renderAppList(data.top_apps);
+  }
+  return true;
+}
+
+function showOfflineError() {
+  document.getElementById("feed").innerHTML = `
+    <div class="error-banner">
+      ⚠ Cannot connect to backend at <strong>localhost:5000</strong><br><br>
+      Make sure you ran: <code>python capture.py</code>
+    </div>
+    <div style="padding:1rem 0;font-size:.7rem;color:var(--text-muted)">
+      Showing demo data while offline…
+    </div>
+  `;
+  renderDemoData();
+}
+
+function renderAppList(apps) {
+  const list = document.getElementById("app-list");
+  const tabs = document.getElementById("tabs");
+
+  list.innerHTML = "";
+  // Remove old app tabs
+  Array.from(tabs.querySelectorAll("[data-app]")).forEach(t => { if (t.dataset.app) t.remove(); });
+
+  apps.slice(0, 8).forEach(a => {
+    const item = document.createElement("div");
+    item.className = "nav-item";
+    item.textContent = `📱 ${a.app}`;
+    item.dataset.app = a.app;
+    item.onclick = () => { filterApp(a.app, item); };
+    list.appendChild(item);
+
+    const tab = document.createElement("div");
+    tab.className = "tab";
+    tab.textContent = a.app;
+    tab.dataset.app = a.app;
+    tab.onclick = () => filterApp(a.app, tab);
+    tabs.appendChild(tab);
+  });
+}
+
+// ── Load & Render Memories ────────────────────────────────────────────────────
+async function loadMemories() {
+  document.getElementById("feed").innerHTML = '<div style="padding:1.5rem;text-align:center"><div class="spinner"></div></div>';
+  const url = currentApp ? `/memories?app=${encodeURIComponent(currentApp)}&limit=60` : `/memories?limit=60`;
+  const data = await api(url);
+  if (!data) { showOfflineError(); return; }
+  renderCards(data.memories, "");
+}
+
+function renderCards(items, query) {
+  const feed = document.getElementById("feed");
+  feed.innerHTML = "";
+
+  if (!items || !items.length) {
+    feed.innerHTML = '<div class="empty-state">No memories found</div>';
+    return;
+  }
+
+  // Group by date
+  const groups = {};
+  items.forEach(m => {
+    const d = m.timestamp ? m.timestamp.split("T")[0] : "Unknown";
+    const label = d === new Date().toISOString().split("T")[0] ? 
+    "Today" : d;
+    if (!groups[label]) groups[label] = [];
+    groups[label].push(m);
+  });
+
+  Object.entries(groups).forEach(([label, mems]) => {
+    const gl = document.createElement("div");
+    gl.className = "group-label";
+    gl.textContent = label;
+    feed.appendChild(gl);
+
+    mems.forEach((m, i) => {
+      const card = document.createElement("div");
+      card.className = "memory-card" + (m.id === selectedId ? " selected" : "");
+      card.style.animationDelay = (i * 0.03) + "s";
+      card.onclick = () => selectCard(m, card);
+
+      let txt = m.ocr_text || m.snippet || "";
+      if (query && txt) {
+        const re = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")})`, "gi");
+        txt = txt.replace(re, "<mark>$1</mark>");
+      }
+
+      const time = m.timestamp ? m.timestamp.split("T")[1]?.split(".")[0] || "" : "";
+      const appName = m.app_name || "Unknown";
+      const simHtml = m.similarity ? `<span class="sim-badge">${m.similarity}%</span>` : "";
+
+      card.innerHTML = `
+        <div class="card-thumb">
+          ${m.thumb_b64 ? `<img src="data:image/jpeg;base64,${m.thumb_b64}" alt="">` : `<span style="font-size:1.1rem">🖥</span>`}
+        </div>
+        <div class="card-body">
+          <div class="card-top">
+            <span class="app-badge">${appName}</span>
+            <span class="card-time">${time}</span>
+            ${simHtml}
+          </div>
+          <div class="card-text">${txt || "<em style='color:var(--text-muted)'>No text</em>"}</div>
+        </div>
+      `;
+      feed.appendChild(card);
+    });
+  });
+}
+
+// ── Detail Panel ──────────────────────────────────────────────────────────────
+async function selectCard(m, el) {
+  document.querySelectorAll(".memory-card").forEach(c => c.classList.remove("selected"));
+  el.classList.add("selected");
+  selectedId = m.id;
+  document.getElementById("detail-id").textContent = m.id || "";
+  document.getElementById("detail-body").innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+
+  const full = await api(`/memory/${m.id}`);
+  const data = full || m;
+
+  const time = data.timestamp || "";
+  const app = data.app_name || "";
+  const title = data.window_title || "";
+  const ocr = data.ocr_text || "";
+
+  document.getElementById("detail-body").innerHTML = `
+    <div class="preview-box">
+      ${data.thumb_b64
+        ? `<img src="data:image/jpeg;base64,${data.thumb_b64}" alt="Screenshot">`
+        : `<div class="preview-placeholder">🖥 No screenshot</div>`}
+    </div>
+
+    <div class="ocr-block">
+      <div class="block-label">Tesseract OCR</div>
+      <pre style="white-space:pre-wrap;font-family:var(--mono)">${ocr.slice(0,600) || "No text extracted"}</pre>
+    </div>
+
+    <div class="meta-grid">
+      <div class="meta-cell"><div class="meta-key">App</div><div class="meta-val">${app}</div></div>
+      <div class="meta-cell"><div class="meta-key">Time</div><div class="meta-val">${time.replace("T"," ").split(".")[0]}</div></div>
+      <div class="meta-cell" style="grid-column:1/-1"><div class="meta-key">Window Title</div><div class="meta-val">${title}</div></div>
+    </div>
+
+    <div style="font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);margin-bottom:.5rem">Tags</div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:1rem">
+      <span style="font-size:.6rem;padding:2px 7px;border-radius:10px;border:1px solid #1e3a5f;color:var(--blue)">ocr</span>
+      ${data.embedding ? `<span style="font-size:.6rem;padding:2px 7px;border-radius:10px;border:1px solid #3a1e5f;color:var(--purple)">embedded</span>` : ""}
+    </div>
+  `;
+}
+
+// ── Search ────────────────────────────────────────────────────────────────────
+function debounceSearch(v) {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => doSearch(v), 350);
+}
+
+async function doSearch(q) {
+  if (!q.trim()) { loadMemories(); return; }
+  document.getElementById("feed").innerHTML = '<div style="padding:1rem;text-align:center"><div class="spinner"></div></div>';
+  const endpoint = searchMode === "semantic" ? "/search/semantic" : "/search/keyword";
+  const data = await api(`${endpoint}?q=${encodeURIComponent(q)}`);
+  if (!data) { showOfflineError(); return; }
+  const items = data.results || [];
+  renderCards(items, q);
+}
+
+function setMode(mode, btn) {
+  searchMode = mode;
+  document.querySelectorAll(".mode-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  const q = document.getElementById("searchInput").value;
+  if (q.trim()) doSearch(q);
+}
+
+function filterApp(app, el) {
+  currentApp = app;
+  document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  if (el) el.classList.add("active");
+  loadMemories();
+}
+
+// ── Capture Control ───────────────────────────────────────────────────────────
+async function startCapture() { await apiPost("/capture/start"); await checkStatus(); }
+async function stopCapture()  { await apiPost("/capture/stop");  await checkStatus(); }
+
+// ── Demo fallback data ────────────────────────────────────────────────────────
+function renderDemoData() {
+  const demo = [
+    { id:"DEMO-001", app_name:"Chrome", timestamp:"2024-01-01T09:38:00", ocr_text:"developer.android.com · MediaProjection API · createVirtualDisplay()", thumb_b64:null },
+    { id:"DEMO-002", app_name:"VS Code", timestamp:"2024-01-01T09:18:00", ocr_text:"fun insertMemory(mem: Memory) {\n  db.memoryDao().insert(mem)\n}", thumb_b64:null },
+    { id:"DEMO-003", app_name:"Notion", timestamp:"2024-01-01T08:15:00", ocr_text:"LifeReplay — Tech Stack: Kotlin, Room, ML Kit, Whisper.cpp, ONNX", thumb_b64:null },
+  ];
+  renderCards(demo, "");
+}
+
+// ── Clock ─────────────────────────────────────────────────────────────────────
+setInterval(() => {
+  document.getElementById("b-clock").innerHTML = `🕐 <span class="v">${new Date().toLocaleTimeString()}</span>`;
+}, 1000);
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(async () => {
+  await checkStatus();
+  await loadMemories();
+  setInterval(checkStatus, 10000); // refresh stats every 10s
+  setInterval(() => {
+    const q = document.getElementById("searchInput").value;
+    if (!q) loadMemories();
+  }, 15000); // auto-refresh feed every 15s
+})();
+</script>
+</body>
+</html>
