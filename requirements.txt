@@ -1,0 +1,10 @@
+mss==9.0.1
+Pillow==10.3.0
+pytesseract==0.3.10
+flask==3.0.3
+flask-cors==4.0.1
+psutil==5.9.8
+numpy==1.26.4
+
+# Optional — remove if you don't want semantic search (saves ~500MB)
+sentence-transformers==3.0.1
